@@ -454,9 +454,12 @@ int main(int argc,char* argv[]) {
 	bytesRead = fread(torrent,1,torrentLen,fp);
 	if (fp != NULL) fclose(fp); fp = NULL;
 	i = beStepOver(torrent,torrentLen,0);
-	if (i != torrentLen) {
+	if (i == -1) {
 		printf("Unable to parse torrent metadata file %s\n",torrentFile);
 		return 2;
+	}
+	if (i != torrentLen) {
+	  printf("Torrent metadata file %s has some inconsistencies with its size\n",torrentFile);
 	}
 
 	torrentInfo = beFindInDict(torrent,torrentLen,0,"info");
