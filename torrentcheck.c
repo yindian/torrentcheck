@@ -372,7 +372,7 @@ int main(int argc,char* argv[]) {
 		return 3;
 	}
 	if ((sizeof(INT64) != 8) || (sizeof(UINT4) != 4)) {
-		printf("Wrong word length UINT4=%i INT64=%i - this build is faulty!\n",sizeof(UINT4),sizeof(INT64));
+		printf("Wrong word length UINT4=%lu INT64=%lu - this build is faulty!\n",sizeof(UINT4),sizeof(INT64));
 		return 3;
 	}
 
@@ -502,7 +502,7 @@ int main(int argc,char* argv[]) {
 
 		fileRecordList = malloc(numFiles * sizeof(fileRecord));
 		if (torrent == NULL) {
-			printf("Unable to malloc %i bytes for file record list\n",numFiles * sizeof(fileRecord));
+			printf("Unable to malloc %lu bytes for file record list\n",numFiles * sizeof(fileRecord));
 			return 2;
 		}
 
@@ -554,7 +554,7 @@ int main(int argc,char* argv[]) {
 
 			fileRecordList[currentFile].filePath = malloc(strlen(filePath)+1);
 			if (fileRecordList[currentFile].filePath == NULL) {
-				printf("Unable to malloc %i bytes for file path\n",strlen(filePath)+1);
+				printf("Unable to malloc %lu bytes for file path\n",strlen(filePath)+1);
 				return 2;
 			}
 			strcpy(fileRecordList[currentFile].filePath,filePath);
@@ -642,7 +642,7 @@ int main(int argc,char* argv[]) {
 	if (contentPath != NULL) {
 		pieceBuf = malloc(pieceLen);
 		if (pieceBuf == NULL) {
-			printf("Unable to malloc %i bytes for piece buffer\n",pieceLen);
+			printf("Unable to malloc %lli bytes for piece buffer\n",pieceLen);
 			return 2;
 		}
 	}

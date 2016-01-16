@@ -1,0 +1,12 @@
+.*.swp
+*.swp
+*~
+*.orig
+*.rej
+*.bak
+*.autosave
+
+cscope.files
+cscope.out
+
+torrentcheck
