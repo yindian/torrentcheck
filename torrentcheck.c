@@ -691,6 +691,19 @@ int main(int argc,char* argv[]) {
 				strcpy(filePath2+filePathOfs,fileRecordList[currentFile].filePath);
 				filePathActual = filePath2;
 				fp = fopen(filePath2,"rb");
+				if (fp == NULL) { // Generate padding files on-the-fly
+					if (!strncmp(fileRecordList[currentFile].filePath, "_____padding_file_", 18)) {
+						fp = tmpfile();
+						if (fp) {
+							INT64 n = fileBytesExpected;
+							while (n > 0) {
+								fputc(0, fp);
+								--n;
+							}
+							rewind(fp);
+						}
+					}
+				}
 			}
 
 			if (fp == NULL) {
