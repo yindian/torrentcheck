@@ -521,7 +521,10 @@ int main(int argc,char* argv[]) {
 				printf("Unable to read \"length\" from torrent\n");
 				return 2;
 			}
-			ofs = beFindInDict(torrent,torrentLen,thisFileOffset,"path");
+			ofs = beFindInDict(torrent,torrentLen,thisFileOffset,"path.utf-8");
+			if (ofs < 0) {
+				ofs = beFindInDict(torrent,torrentLen,thisFileOffset,"path");
+			}
 			if (ofs < 0) {
 				printf("Unable to read \"path\" from torrent\n");
 				return 2;
