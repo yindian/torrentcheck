@@ -13,8 +13,50 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#if 0
 #include <malloc.h>
+#endif
 #include <string.h>
+
+#ifndef UTF8MAC_DETECT
+#define UTF8MAC_DETECT 1
+#endif
+
+#if UTF8MAC_DETECT
+#include <strings.h>
+#include <sys/param.h>
+
+#ifndef __LITTLE_ENDIAN__
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define __LITTLE_ENDIAN__ 1
+#endif
+#endif
+
+typedef void *conv_t;
+
+/* Our own notion of wide character, as UCS-4, according to ISO-10646-1. */
+typedef unsigned int ucs4_t;
+
+/* Return code if invalid input after a shift sequence of n bytes was read.
+   (xxx_mbtowc) */
+#define RET_SHIFT_ILSEQ(n)  (-1-2*(n))
+/* Return code if invalid. (xxx_mbtowc) */
+#define RET_ILSEQ           RET_SHIFT_ILSEQ(0)
+/* Return code if only a shift sequence of n bytes was read. (xxx_mbtowc) */
+#define RET_TOOFEW(n)       (-2-2*(n))
+/* Retrieve the n from the encoded RET_... value. */
+#define DECODE_SHIFT_ILSEQ(r)  ((unsigned int)(RET_SHIFT_ILSEQ(0) - (r)) / 2)
+#define DECODE_TOOFEW(r)       ((unsigned int)(RET_TOOFEW(0) - (r)) / 2)
+/* Maximum value of n that may be used as argument to RET_SHIFT_ILSEQ or RET_TOOFEW. */
+#define RET_COUNT_MAX       ((INT_MAX / 2) - 1)
+
+/* Return code if invalid. (xxx_wctomb) */
+#define RET_ILUNI      -1
+/* Return code if output buffer is too small. (xxx_wctomb, xxx_reset) */
+#define RET_TOOSMALL   -2
+
+#include "utf8mac.h"
+#endif
 
 // Begin required for SHA1
 typedef unsigned char *POINTER;
@@ -147,6 +189,8 @@ int beParseString(BYTE* benstr,int benstrLen,int benstrOffset,BYTE** stringBegin
 //	return (benstrOffset);
 //}
 
+
+int beStepOver(BYTE* benstr,int benstrLen,int benstrOffset);
 
 // Return offset of an element in a dict, or -1 if not found
 // dictKey is a null-terminated string
@@ -707,6 +751,64 @@ int main(int argc,char* argv[]) {
 						}
 					}
 				}
+#if UTF8MAC_DETECT
+				if (fp == NULL) {
+					const char *s = fileRecordList[currentFile].filePath;
+					char *p = filePath2+filePathOfs;
+					size_t len = strlen(s);
+					size_t n = filePathMax - filePathOfs - 1;
+					ucs4_t wc;
+					int ret;
+#define CONV_S_TO_P_IN_UTF8MAC() \
+					while (len) { \
+						ret = utf8mac_mbtowc(NULL, &wc, s, len); \
+						if (ret <= 0 || len < (size_t) ret) \
+							break; \
+						s += ret; \
+						len -= ret; \
+						ret = utf8mac_wctomb(NULL, p, wc, n); \
+						if (ret <= 0 || n < (size_t) ret) \
+							break; \
+						p += ret; \
+						n -= ret; \
+					}
+					CONV_S_TO_P_IN_UTF8MAC();
+					if (len == 0) {
+						*p = 0;
+						fp = fopen(filePath2, "rb");
+						if (fp == NULL) {
+							s = contentPath;
+							p = filePath2;
+							len = contentPathLen;
+							n = filePathMax - 1;
+							CONV_S_TO_P_IN_UTF8MAC();
+							if (len == 0) {
+								if (p > filePath2 && p[-1] != DIR_SEPARATOR) {
+									*p++ = DIR_SEPARATOR;
+									--n;
+								}
+								s = fileRecordList[currentFile].filePath;
+								len = strlen(s);
+								CONV_S_TO_P_IN_UTF8MAC();
+								if (len == 0) {
+									*p = 0;
+									fp = fopen(filePath2, "rb");
+								}
+							}
+						}
+					}
+#undef CONV_S_TO_P_IN_UTF8MAC
+					if (fp == NULL) {
+						memcpy(filePath2,contentPath,contentPathLen);
+						filePathOfs = contentPathLen;
+						if ((filePathOfs > 0)&&(filePath2[filePathOfs-1] != DIR_SEPARATOR)) {
+							filePath2[filePathOfs] = DIR_SEPARATOR;
+							filePathOfs++;
+						}
+						strcpy(filePath2+filePathOfs,fileRecordList[currentFile].filePath);
+					}
+				}
+#endif
 			}
 
 			if (fp == NULL) {
