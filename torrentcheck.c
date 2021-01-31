@@ -58,6 +58,10 @@ typedef unsigned int ucs4_t;
 #include "utf8mac.h"
 #endif
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 // Begin required for SHA1
 typedef unsigned char *POINTER;
 typedef unsigned int UINT4;
@@ -379,6 +383,9 @@ int main(int argc,char* argv[]) {
 	int fileNameLen = -1;
 	char* filePath;
 	char* filePath2;
+#ifdef WIN32
+	LPWSTR wFilePath;
+#endif
 	char* filePathActual;
 	int filePathMax = 8192;
 	int filePathOfs;
@@ -620,6 +627,14 @@ int main(int argc,char* argv[]) {
 		return 2;
 	}
 
+#ifdef WIN32
+	wFilePath = malloc(filePathMax * sizeof(WCHAR));
+	if (wFilePath == NULL) {
+		printf("Unable to malloc %i wide chars for file path\n", filePathMax);
+		return 2;
+	}
+#endif
+
 	if ((ofs < 0)&&(torrentFiles < 0)) {
 		printf("Unable to read \"info->length\" or \"info->files\" from torrent\n");
 		return 2;
@@ -751,6 +766,28 @@ int main(int argc,char* argv[]) {
 						}
 					}
 				}
+#ifdef WIN32
+#if 0
+#define PRLOG printf
+#else
+#define PRLOG(...)
+#endif
+				if (fp == NULL) {
+					int len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED | MB_ERR_INVALID_CHARS,
+							filePath2, filePathOfs, wFilePath, filePathMax);
+					if (len) {
+						len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+							filePath2 + filePathOfs, -1, wFilePath + len, filePathMax - len);
+						if (len) {
+							fp = _wfopen(wFilePath, L"rb");
+						} else {
+							PRLOG("Failure %d on line %d to convert UTF-8 to Unicode for %s\n", GetLastError(), __LINE__, filePath2 + filePathOfs);
+						}
+					} else {
+						PRLOG("Failure %d on line %d to convert ANSI to Unicode for %.*s\n", GetLastError(), __LINE__, filePathOfs, filePath2);
+					}
+				}
+#endif
 #if UTF8MAC_DETECT
 				if (fp == NULL) {
 					const char *s = fileRecordList[currentFile].filePath;
@@ -776,6 +813,24 @@ int main(int argc,char* argv[]) {
 					if (len == 0) {
 						*p = 0;
 						fp = fopen(filePath2, "rb");
+#ifdef WIN32
+						if (fp == NULL) {
+							int len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED | MB_ERR_INVALID_CHARS,
+									filePath2, filePathOfs, wFilePath, filePathMax);
+							if (len) {
+								len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+									filePath2 + filePathOfs, -1, wFilePath + len, filePathMax - len);
+								if (len) {
+									fp = _wfopen(wFilePath, L"rb");
+								} else {
+									PRLOG("Failure %d on line %d to convert UTF-8 to Unicode for %s\n", GetLastError(), __LINE__, filePath2 + filePathOfs);
+								}
+							} else {
+								PRLOG("Failure %d on line %d to convert ANSI to Unicode for %.*s\n", GetLastError(), __LINE__, filePathOfs, filePath2);
+							}
+						}
+#endif
+
 						if (fp == NULL) {
 							s = contentPath;
 							p = filePath2;
@@ -793,6 +848,17 @@ int main(int argc,char* argv[]) {
 								if (len == 0) {
 									*p = 0;
 									fp = fopen(filePath2, "rb");
+#ifdef WIN32
+									if (fp == NULL) {
+										int len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+											filePath2, -1, wFilePath, filePathMax);
+										if (len) {
+											fp = _wfopen(wFilePath, L"rb");
+										} else {
+											PRLOG("Failure %d on line %d to convert UTF-8 to Unicode for %s\n", GetLastError(), __LINE__, filePath2);
+										}
+									}
+#endif
 								}
 							}
 						}
